@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Suivi RER C · D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#EDEEE8;
+    --card:#FFFFFF;
+    --ink:#1B1D1B;
+    --muted:#6B6F68;
+    --border:#DBDDD3;
+    --line-c:#FFCE00;
+    --line-c-ink:#4A3900;
+    --line-d:#00814F;
+    --line-d-ink:#FFFFFF;
+    --sev-0:#E3E5DD;
+    --sev-0-ink:#6B6F68;
+    --sev-1:#F5C453;
+    --sev-1-ink:#5A4004;
+    --sev-2:#EE8C3D;
+    --sev-2-ink:#4A2604;
+    --sev-3:#D6483F;
+    --sev-3-ink:#FFFFFF;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;}
+  #app{max-width:480px;margin:0 auto;padding:16px 16px 96px;min-height:100vh;}
+  h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;margin:0;}
+  .num,.mono{font-family:'IBM Plex Mono',monospace;}
+
+  header.top{padding:8px 0 18px;}
+  header.top h1{font-size:20px;letter-spacing:-0.01em;}
+  header.top p{margin:4px 0 0;font-size:13px;color:var(--muted);}
+
+  .roundel{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-family:'Space Grotesk';font-weight:700;font-size:13px;flex-shrink:0;}
+  .roundel.c{background:var(--line-c);color:var(--line-c-ink);}
+  .roundel.d{background:var(--line-d);color:var(--line-d-ink);}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+
+  .date-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .date-nav button{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:16px;color:var(--ink);}
+  .date-nav .date-label{flex:1;text-align:center;font-size:14px;}
+  .date-nav .date-label .today-tag{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+
+  .trip-title{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .trip-title i{font-size:15px;color:var(--muted);}
+  .trip-title span{font-size:14px;font-weight:600;}
+
+  .line-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .line-row:last-child{margin-bottom:0;}
+  .line-row .roundel{margin-right:2px;}
+  .sev-buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1;}
+  .sev-btn{border:1px solid var(--border);background:var(--sev-0);color:var(--sev-0-ink);border-radius:8px;padding:7px 2px;font-size:11px;font-weight:500;text-align:center;line-height:1.2;}
+  .sev-btn.active[data-lvl="aucune"]{background:var(--sev-0);color:var(--sev-0-ink);border-color:var(--sev-0);}
+  .sev-btn.active[data-lvl="faible"]{background:var(--sev-1);color:var(--sev-1-ink);border-color:var(--sev-1);}
+  .sev-btn.active[data-lvl="forte"]{background:var(--sev-2);color:var(--sev-2-ink);border-color:var(--sev-2);}
+  .sev-btn.active[data-lvl="tres_forte"]{background:var(--sev-3);color:var(--sev-3-ink);border-color:var(--sev-3);}
+
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;}
+  .toast.show{opacity:.92;}
+
+  nav.bottom{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;max-width:480px;margin:0 auto;}
+  nav.bottom button{flex:1;padding:12px 0 10px;background:none;border:none;font-family:'Inter';font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;}
+  nav.bottom button i{font-size:19px;}
+  nav.bottom button.active{color:var(--ink);font-weight:600;}
+
+  .tabs-period{display:flex;gap:6px;margin-bottom:16px;}
+  .tabs-period button{flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:12px;color:var(--muted);font-weight:500;}
+  .tabs-period button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .metric .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .metric .value{font-size:22px;font-weight:600;margin-top:4px;}
+
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  canvas{max-height:180px;}
+
+  .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 10px;}
+  .section-title:first-child{margin-top:0;}
+
+  .empty-hint{font-size:12px;color:var(--muted);text-align:center;padding:10px 0;}
+
+  .reset-link{display:block;text-align:center;font-size:12px;color:var(--muted);margin-top:24px;text-decoration:underline;background:none;border:none;width:100%;}
+
+  .icon-btn{background:none;border:none;font-size:18px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LEVELS = ['aucune','faible','forte','tres_forte'];
+const LEVEL_LABELS = {aucune:'Aucune', faible:'Faible', forte:'Forte', tres_forte:'Très forte'};
+const monthCache = {};
+let currentTab = 'log';
+let selectedDate = todayStr();
+let statsWindow = 7;
+
+function pad(n){return n<10?'0'+n:''+n;}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function ymOf(dateStr){return dateStr.slice(0,7);}
+function dateFromStr(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function addDays(dateStr,n){const d=dateFromStr(dateStr);d.setDate(d.getDate()+n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function isWeekday(dateStr){const day=dateFromStr(dateStr).getDay();return day>=1&&day<=5;}
+function frDate(dateStr){const d=dateFromStr(dateStr);return d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+
+async function loadMonth(ym){
+  if(monthCache[ym]) return monthCache[ym];
+  try{
+    const raw = localStorage.getItem('rer-tracker:month:'+ym);
+    monthCache[ym] = raw ? JSON.parse(raw) : {};
+  }catch(e){
+    monthCache[ym] = {};
+  }
+  return monthCache[ym];
+}
+async function saveMonth(ym){
+  try{
+    localStorage.setItem('rer-tracker:month:'+ym, JSON.stringify(monthCache[ym]));
+  }catch(e){
+    showToast("Erreur d'enregistrement");
+  }
+}
+
+function getTrip(dateStr, period){
+  const ym = ymOf(dateStr);
+  const data = monthCache[ym] || {};
+  const day = data[dateStr];
+  if(!day || !day[period]) return {c:'aucune', d:'aucune'};
+  return day[period];
+}
+
+async function setTripLevel(dateStr, period, line, level){
+  const ym = ymOf(dateStr);
+  await loadMonth(ym);
+  const data = monthCache[ym];
+  if(!data[dateStr]) data[dateStr] = {};
+  if(!data[dateStr][period]) data[dateStr][period] = {c:'aucune', d:'aucune'};
+  data[dateStr][period][line] = level;
+  const t = data[dateStr][period];
+  if(t.c==='aucune' && t.d==='aucune'){
+    delete data[dateStr][period];
+    if(Object.keys(data[dateStr]).length===0) delete data[dateStr];
+  }
+  await saveMonth(ym);
+  showToast('Enregistré');
+  renderLog();
+}
+
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>el.classList.remove('show'), 1400);
+}
+
+function severityBtns(dateStr, period, line, current){
+  return LEVELS.map(lvl=>{
+    const active = current===lvl ? 'active' : '';
+    return `<button class="sev-btn ${active}" data-lvl="${lvl}" onclick="setTripLevel('${dateStr}','${period}','${line}','${lvl}')">${LEVEL_LABELS[lvl]}</button>`;
+  }).join('');
+}
+
+async function renderLog(){
+  const app = document.getElementById('app');
+  const ym = ymOf(selectedDate);
+  await loadMonth(ym);
+  const matin = getTrip(selectedDate,'matin');
+  const soir = getTrip(selectedDate,'soir');
+  const isToday = selectedDate===todayStr();
+
+  app.innerHTML = `
+    <header class="top">
+      <h1>Suivi RER C · D</h1>
+      <p>Bibliothèque F. Mitterrand ↔ Bras de Fer</p>
+    </header>
+
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">‹</button>
+      <div class="date-label">
+        ${capitalize(frDate(selectedDate))}
+        ${isToday ? '<span class="today-tag">Aujourd\\'hui</span>' : ''}
+      </div>
+      <button onclick="changeDate(1)" ${selectedDate>=todayStr()?'disabled style="opacity:.3"':''}>›</button>
+    </div>
+
+    <div class="card">
+      <div class="trip-title"><span>Trajet du matin</span></div>
+      <div class="line-row">
+        <span class="roundel c">C</span>
+        <div class="sev-buttons">${severityBtns(selectedDate,'matin','c',matin.c)}</div>
+      </div>
+      <div class="line-row">
+        <span class="roundel d">D</span>
+        <div class="sev-buttons">${severityBtns(selectedDate,'matin','d',matin.d)}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="trip-title"><span>Trajet du soir</span></div>
+      <div class="line-row">
+        <span class="roundel c">C</span>
+        <div class="sev-buttons">${severityBtns(selectedDate,'soir','c',soir.c)}</div>
+      </div>
+      <div class="line-row">
+        <span class="roundel d">D</span>
+        <div class="sev-buttons">${severityBtns(selectedDate,'soir','d',soir.d)}</div>
+      </div>
+    </div>
+
+    <p class="empty-hint">Rien à faire si le trajet s'est bien passé — seule une perturbation doit être notée.</p>
+
+    ${bottomNav()}
+  `;
+}
+
+function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+function changeDate(delta){
+  const nd = addDays(selectedDate, delta);
+  if(nd>todayStr()) return;
+  selectedDate = nd;
+  renderLog();
+}
+
+function bottomNav(){
+  return `
+    <nav class="bottom">
+      <button class="${currentTab==='log'?'active':''}" onclick="switchTab('log')"><i class="ti">🚆</i>Enregistrer</button>
+      <button class="${currentTab==='stats'?'active':''}" onclick="switchTab('stats')"><i class="ti">📊</i>Statistiques</button>
+    </nav>
+  `;
+}
+
+function switchTab(tab){
+  currentTab = tab;
+  if(tab==='log') renderLog();
+  else renderStats();
+}
+
+// ---------- STATS ----------
+
+function windowDays(n){
+  const days = [];
+  let d = todayStr();
+  let count = 0;
+  let cursor = d;
+  while(count < 400){
+    if(isWeekday(cursor)) { days.push(cursor); count++; }
+    if(days.length>=n) break;
+    cursor = addDays(cursor,-1);
+  }
+  return days.reverse();
+}
+
+async function computeStats(nDaysTarget){
+  const days = windowDays(nDaysTarget);
+  const yms = [...new Set(days.map(ymOf))];
+  await Promise.all(yms.map(loadMonth));
+
+  const countsC = {aucune:0, faible:0, forte:0, tres_forte:0};
+  const countsD = {aucune:0, faible:0, forte:0, tres_forte:0};
+  let totalTrips = 0;
+  let perturbedTrips = 0;
+  const weight = {aucune:0, faible:1, forte:2, tres_forte:3};
+  let scoreC = 0, scoreD = 0;
+
+  days.forEach(dateStr=>{
+    ['matin','soir'].forEach(period=>{
+      totalTrips++;
+      const t = getTrip(dateStr, period);
+      countsC[t.c]++;
+      countsD[t.d]++;
+      scoreC += weight[t.c];
+      scoreD += weight[t.d];
+      if(t.c!=='aucune' || t.d!=='aucune') perturbedTrips++;
+    });
+  });
+
+  return {days, totalTrips, perturbedTrips, countsC, countsD, scoreC, scoreD};
+}
+
+let chartC, chartD;
+
+async function renderStats(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <h1>Statistiques</h1>
+      <p>Trajets domicile-travail, jours ouvrés</p>
+    </header>
+    <div class="tabs-period">
+      <button data-w="7" class="${statsWindow===7?'active':''}" onclick="setWindow(7)">Semaine</button>
+      <button data-w="30" class="${statsWindow===30?'active':''}" onclick="setWindow(30)">Mois</button>
+      <button data-w="260" class="${statsWindow===260?'active':''}" onclick="setWindow(260)">Année</button>
+    </div>
+    <div id="stats-body"><p class="empty-hint">Chargement…</p></div>
+    ${bottomNav()}
+  `;
+
+  const stats = await computeStats(statsWindow);
+  const pct = stats.totalTrips ? Math.round(100*stats.perturbedTrips/stats.totalTrips) : 0;
+  const okPct = 100-pct;
+  const period0 = frDate(stats.days[0]);
+  const periodN = frDate(stats.days[stats.days.length-1]);
+
+  const dominant = stats.scoreC===stats.scoreD ? 'équivalentes' : (stats.scoreC>stats.scoreD ? 'la ligne C se perturbe davantage' : 'la ligne D se perturbe davantage');
+
+  const body = document.getElementById('stats-body');
+  body.innerHTML = `
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="label">Trajets suivis</div>
+        <div class="value num">${stats.totalTrips}</div>
+      </div>
+      <div class="metric">
+        <div class="label">Sans incident</div>
+        <div class="value num">${okPct}%</div>
+      </div>
+      <div class="metric">
+        <div class="label">Avec perturbation</div>
+        <div class="value num">${pct}%</div>
+      </div>
+      <div class="metric">
+        <div class="label">Comparaison</div>
+        <div class="value" style="font-size:13px;font-weight:500;line-height:1.3;">${capitalize(dominant)}</div>
+      </div>
+    </div>
+
+    <div class="section-title">RER C</div>
+    <div class="card">
+      <canvas id="chartC"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--sev-0)"></i>Aucune ${stats.countsC.aucune}</span>
+        <span><i style="background:var(--sev-1)"></i>Faible ${stats.countsC.faible}</span>
+        <span><i style="background:var(--sev-2)"></i>Forte ${stats.countsC.forte}</span>
+        <span><i style="background:var(--sev-3)"></i>Très forte ${stats.countsC.tres_forte}</span>
+      </div>
+    </div>
+
+    <div class="section-title">RER D</div>
+    <div class="card">
+      <canvas id="chartD"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--sev-0)"></i>Aucune ${stats.countsD.aucune}</span>
+        <span><i style="background:var(--sev-1)"></i>Faible ${stats.countsD.faible}</span>
+        <span><i style="background:var(--sev-2)"></i>Forte ${stats.countsD.forte}</span>
+        <span><i style="background:var(--sev-3)"></i>Très forte ${stats.countsD.tres_forte}</span>
+      </div>
+    </div>
+
+    <p class="empty-hint">Période : ${period0} → ${periodN}. Les trajets non renseignés comptent comme non perturbés.</p>
+    <button class="reset-link" onclick="confirmReset()">Réinitialiser toutes les données</button>
+  `;
+
+  if(chartC) chartC.destroy();
+  if(chartD) chartD.destroy();
+  const ctxC = document.getElementById('chartC').getContext('2d');
+  const ctxD = document.getElementById('chartD').getContext('2d');
+  const opts = (counts)=>({
+    type:'bar',
+    data:{
+      labels:['Aucune','Faible','Forte','Très forte'],
+      datasets:[{
+        data:[counts.aucune, counts.faible, counts.forte, counts.tres_forte],
+        backgroundColor:['#E3E5DD','#F5C453','#EE8C3D','#D6483F'],
+        borderRadius:6,
+        borderWidth:0
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{beginAtZero:true, ticks:{precision:0, font:{size:10}}, grid:{color:'#EDEEE8'}},
+        x:{ticks:{font:{size:10}}, grid:{display:false}}
+      }
+    }
+  });
+  chartC = new Chart(ctxC, opts(stats.countsC));
+  chartD = new Chart(ctxD, opts(stats.countsD));
+}
+
+function setWindow(n){
+  statsWindow = n;
+  renderStats();
+}
+
+async function confirmReset(){
+  if(!confirm('Supprimer définitivement toutes les données enregistrées ?')) return;
+  try{
+    Object.keys(localStorage)
+      .filter(k=>k.startsWith('rer-tracker:month:'))
+      .forEach(k=>localStorage.removeItem(k));
+    for(const k in monthCache) delete monthCache[k];
+    showToast('Données réinitialisées');
+    renderStats();
+  }catch(e){
+    showToast('Erreur lors de la réinitialisation');
+  }
+}
+
+renderLog();
+</script>
+</body>
+</html>
