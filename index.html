@@ -86,7 +86,8 @@
   .legend span{display:inline-flex;align-items:center;gap:5px;}
   .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
 
-  canvas{max-height:180px;}
+  .chart-box{position:relative;height:180px;width:100%;}
+canvas{display:block;}
 
   .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 10px;}
   .section-title:first-child{margin-top:0;}
@@ -377,7 +378,7 @@ async function renderStats(){
 
     <div class="section-title">RER C</div>
     <div class="card">
-      <canvas id="chartC"></canvas>
+      <div class="chart-box"><canvas id="chartC"></canvas></div>
       <div class="legend">
         <span><i style="background:var(--sev-0)"></i>Aucune ${stats.countsC.aucune}</span>
         <span><i style="background:var(--sev-1)"></i>Faible ${stats.countsC.faible}</span>
@@ -388,7 +389,7 @@ async function renderStats(){
 
     <div class="section-title">RER D</div>
     <div class="card">
-      <canvas id="chartD"></canvas>
+      <div class="chart-box"><canvas id="chartD"></canvas></div>
       <div class="legend">
         <span><i style="background:var(--sev-0)"></i>Aucune ${stats.countsD.aucune}</span>
         <span><i style="background:var(--sev-1)"></i>Faible ${stats.countsD.faible}</span>
@@ -417,6 +418,8 @@ async function renderStats(){
       }]
     },
     options:{
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
         y:{beginAtZero:true, ticks:{precision:0, font:{size:10}}, grid:{color:'#EDEEE8'}},
