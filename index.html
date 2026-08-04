@@ -51,9 +51,11 @@
   .date-nav .date-label{flex:1;text-align:center;font-size:14px;}
   .date-nav .date-label .today-tag{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
 
-  .trip-title{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .trip-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
   .trip-title i{font-size:15px;color:var(--muted);}
   .trip-title span{font-size:14px;font-weight:600;}
+  .absent-btn{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:500;}
+  .absent-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
   .line-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
   .line-row:last-child{margin-bottom:0;}
@@ -163,7 +165,7 @@ function getTrip(dateStr, period){
   const ym = ymOf(dateStr);
   const data = monthCache[ym] || {};
   const day = data[dateStr];
-  if(!day || !day[period]) return {c:'aucune', d:'aucune'};
+  if(!day || !day[period]) return {c:'aucune', d:'aucune', absent:false};
   return day[period];
 }
 
@@ -175,12 +177,30 @@ async function setTripLevel(dateStr, period, line, level){
   if(!data[dateStr][period]) data[dateStr][period] = {c:'aucune', d:'aucune'};
   data[dateStr][period][line] = level;
   const t = data[dateStr][period];
-  if(t.c==='aucune' && t.d==='aucune'){
+  if(t.c==='aucune' && t.d==='aucune' && !t.absent){
     delete data[dateStr][period];
     if(Object.keys(data[dateStr]).length===0) delete data[dateStr];
   }
   await saveMonth(ym);
   showToast('Enregistré');
+  renderLog();
+}
+
+async function setTripAbsent(dateStr, period, value){
+  const ym = ymOf(dateStr);
+  await loadMonth(ym);
+  const data = monthCache[ym];
+  if(value){
+    if(!data[dateStr]) data[dateStr] = {};
+    data[dateStr][period] = {c:'aucune', d:'aucune', absent:true};
+  } else {
+    if(data[dateStr]){
+      delete data[dateStr][period];
+      if(Object.keys(data[dateStr]).length===0) delete data[dateStr];
+    }
+  }
+  await saveMonth(ym);
+  showToast(value ? 'Trajet marqué non effectué' : 'Trajet réactivé');
   renderLog();
 }
 
@@ -222,31 +242,37 @@ async function renderLog(){
       <button onclick="changeDate(1)" ${selectedDate>=todayStr()?'disabled style="opacity:.3"':''}>›</button>
     </div>
 
-    <div class="card">
-      <div class="trip-title"><span>Trajet du matin</span></div>
-      <div class="line-row">
+<div class="card">
+      <div class="trip-title">
+        <span>Trajet du matin</span>
+        <button class="absent-btn ${matin.absent?'active':''}" onclick="setTripAbsent('${selectedDate}','matin',${!matin.absent})">${matin.absent ? '✓ Non effectué' : 'Non effectué'}</button>
+      </div>
+      <div class="line-row" style="${matin.absent?'opacity:.35;pointer-events:none;':''}">
         <span class="roundel c">C</span>
         <div class="sev-buttons">${severityBtns(selectedDate,'matin','c',matin.c)}</div>
       </div>
-      <div class="line-row">
+      <div class="line-row" style="${matin.absent?'opacity:.35;pointer-events:none;':''}">
         <span class="roundel d">D</span>
         <div class="sev-buttons">${severityBtns(selectedDate,'matin','d',matin.d)}</div>
       </div>
     </div>
 
     <div class="card">
-      <div class="trip-title"><span>Trajet du soir</span></div>
-      <div class="line-row">
+      <div class="trip-title">
+        <span>Trajet du soir</span>
+        <button class="absent-btn ${soir.absent?'active':''}" onclick="setTripAbsent('${selectedDate}','soir',${!soir.absent})">${soir.absent ? '✓ Non effectué' : 'Non effectué'}</button>
+      </div>
+      <div class="line-row" style="${soir.absent?'opacity:.35;pointer-events:none;':''}">
         <span class="roundel c">C</span>
         <div class="sev-buttons">${severityBtns(selectedDate,'soir','c',soir.c)}</div>
       </div>
-      <div class="line-row">
+      <div class="line-row" style="${soir.absent?'opacity:.35;pointer-events:none;':''}">
         <span class="roundel d">D</span>
         <div class="sev-buttons">${severityBtns(selectedDate,'soir','d',soir.d)}</div>
       </div>
     </div>
 
-    <p class="empty-hint">Rien à faire si le trajet s'est bien passé — seule une perturbation doit être notée.</p>
+    <p class="empty-hint">Rien à faire si le trajet s'est bien passé — seule une perturbation doit être notée. Utilise "Non effectué" si tu n'as pas pris le RER ce jour-là (congés, télétravail, déplacement).</p>
 
     ${bottomNav()}
   `;
@@ -316,8 +342,9 @@ async function computeStats(period){
 
   days.forEach(dateStr=>{
     ['matin','soir'].forEach(period=>{
-      totalTrips++;
       const t = getTrip(dateStr, period);
+      if(t.absent) return;
+      totalTrips++;
       countsC[t.c]++;
       countsD[t.d]++;
       scoreC += weight[t.c];
