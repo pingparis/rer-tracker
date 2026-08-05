@@ -60,6 +60,11 @@
   .trip-title span{font-size:14px;font-weight:600;}
   .absent-btn{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:500;}
   .absent-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .bulk-card summary{cursor:pointer;font-size:14px;font-weight:600;list-style:none;color:var(--ink);}
+  .bulk-card summary::-webkit-details-marker{display:none;}
+  .bulk-card summary::before{content:'+ ';color:var(--muted);font-weight:700;}
+  .bulk-card[open] summary::before{content:'– ';}
+  .bulk-card[open] summary{margin-bottom:2px;}
 
   .line-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
   .line-row:last-child{margin-bottom:0;}
@@ -380,15 +385,15 @@ async function renderLog(){
 
     <p class="empty-hint">Rien à faire si le trajet s'est bien passé — seule une perturbation doit être notée. Utilise "Non effectué" si tu n'as pas pris le RER ce jour-là (congés, télétravail, déplacement).</p>
 
-    <div class="card">
-      <div class="trip-title"><span>Marquer une période non travaillée</span></div>
-      <p class="empty-hint" style="padding:0 0 10px;text-align:left;">Pratique pour les vacances ou une longue absence : marque plusieurs jours d'un coup, sans avoir à cliquer jour par jour.</p>
+    <details class="card bulk-card">
+      <summary>Marquer une période non travaillée</summary>
+      <p class="empty-hint" style="padding:10px 0 10px;text-align:left;">Pratique pour les vacances ou une longue absence : marque plusieurs jours d'un coup, sans avoir à cliquer jour par jour.</p>
       <div style="display:flex;gap:8px;margin-bottom:10px;">
         <input type="date" id="bulk-start" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);font-family:'Inter';font-size:13px;background:var(--card);color:var(--ink);">
         <input type="date" id="bulk-end" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);font-family:'Inter';font-size:13px;background:var(--card);color:var(--ink);">
       </div>
       <button class="absent-btn" style="width:100%;padding:10px;" onclick="bulkMarkAbsentFromInputs()">Marquer cette période comme non travaillée</button>
-    </div>
+    </details>
 
     ${bottomNav()}
   `;
