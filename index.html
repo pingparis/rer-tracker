@@ -39,6 +39,10 @@
   header.top{padding:8px 0 18px;}
   header.top h1{font-size:20px;letter-spacing:-0.01em;}
   header.top p{margin:4px 0 0;font-size:13px;color:var(--muted);}
+  .profile-tag{font-size:12px;}
+  .link-btn{background:none;border:none;padding:0;color:var(--ink);text-decoration:underline;font-size:12px;font-family:'Inter';}
+  .profile-btn{display:block;width:100%;padding:14px;margin-bottom:8px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-family:'Space Grotesk';font-size:15px;font-weight:600;color:var(--ink);}
+  .profile-btn:last-child{margin-bottom:0;}
 
   .roundel{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-family:'Space Grotesk';font-weight:700;font-size:13px;flex-shrink:0;}
   .roundel.c{background:var(--line-c);color:var(--line-c-ink);}
@@ -88,8 +92,20 @@
   .legend span{display:inline-flex;align-items:center;gap:5px;}
   .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
 
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-daylabel{font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;padding-bottom:4px;}
+  .cal-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:'IBM Plex Mono';}
+  .cal-cell.blank{visibility:hidden;}
+  .cal-cell.weekend{background:transparent;color:var(--border);}
+  .cal-cell.future{background:var(--bg);border:1px dashed var(--border);color:var(--muted);}
+  .cal-cell.absent-day{background:var(--card);border:1px dashed var(--border);color:var(--muted);cursor:pointer;}
+  .cal-cell.sev-0{background:var(--sev-0);color:var(--sev-0-ink);cursor:pointer;}
+  .cal-cell.sev-1{background:var(--sev-1);color:var(--sev-1-ink);cursor:pointer;}
+  .cal-cell.sev-2{background:var(--sev-2);color:var(--sev-2-ink);cursor:pointer;}
+  .cal-cell.sev-3{background:var(--sev-3);color:var(--sev-3-ink);cursor:pointer;}
+
   .chart-box{position:relative;height:180px;width:100%;}
-canvas{display:block;}
+  canvas{display:block;}
 
   .section-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 10px;}
   .section-title:first-child{margin-top:0;}
@@ -117,15 +133,20 @@ const firebaseConfig = {
   messagingSenderId: "190400375272",
   appId: "1:190400375272:web:f39a4f3a365b7a99031c5d"
 };
-// 2) Choisis un identifiant secret rien qu'à toi (lettres/chiffres, sans espace).
-//    Note-le quelque part : c'est ta cle vers tes donnees, elle reste
-//    dans ce fichier donc elle survit a une reinitialisation du navigateur.
-const USER_ID = "Tornado-RER";
+// 2) Liste des profils. Chaque profil a un identifiant secret (lettres/chiffres,
+//    sans espace) et un nom affiché. Ajoute-en autant que besoin.
+const PROFILES = [
+  {id:"Tornado-RER", name:"Jules"},
+  {id:"Amelie-RER", name:"Amélie"}
+];
 // =====================================
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const monthsRef = db.collection('rer-tracker').doc(USER_ID).collection('months');
+db.settings({experimentalAutoDetectLongPolling: true, merge: true});
+
+let currentProfile = null;
+let monthsRef = null;
 
 const LEVELS = ['aucune','faible','forte','tres_forte'];
 const LEVEL_LABELS = {aucune:'Aucune', faible:'Faible', forte:'Forte', tres_forte:'Très forte'};
@@ -133,6 +154,7 @@ const monthCache = {};
 let currentTab = 'log';
 let selectedDate = todayStr();
 let statsWindow = 'week';
+let calendarMonth = todayStr().slice(0,7);
 
 function pad(n){return n<10?'0'+n:''+n;}
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
@@ -212,6 +234,53 @@ function showToast(msg){
   showToast._t = setTimeout(()=>el.classList.remove('show'), 1400);
 }
 
+function profileName(id){
+  const p = PROFILES.find(p=>p.id===id);
+  return p ? p.name : id;
+}
+
+function renderProfileSelect(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <header class="top">
+      <h1>Suivi RER C · D</h1>
+      <p>Qui es-tu ?</p>
+    </header>
+    <div class="card">
+      ${PROFILES.map(p=>`<button class="profile-btn" onclick="chooseProfile('${p.id}')">${p.name}</button>`).join('')}
+    </div>
+  `;
+}
+
+function chooseProfile(id){
+  localStorage.setItem('rer-tracker:profile', id);
+  currentProfile = id;
+  monthsRef = db.collection('rer-tracker').doc(currentProfile).collection('months');
+  for(const k in monthCache) delete monthCache[k];
+  document.getElementById('app').innerHTML = '<p class="empty-hint" style="padding-top:40px;">Chargement…</p>';
+  renderLog();
+}
+
+function switchProfile(){
+  localStorage.removeItem('rer-tracker:profile');
+  currentProfile = null;
+  monthsRef = null;
+  for(const k in monthCache) delete monthCache[k];
+  renderProfileSelect();
+}
+
+function initApp(){
+  const saved = localStorage.getItem('rer-tracker:profile');
+  if(saved && PROFILES.find(p=>p.id===saved)){
+    currentProfile = saved;
+    monthsRef = db.collection('rer-tracker').doc(currentProfile).collection('months');
+    document.getElementById('app').innerHTML = '<p class="empty-hint" style="padding-top:40px;">Chargement…</p>';
+    renderLog();
+  } else {
+    renderProfileSelect();
+  }
+}
+
 function severityBtns(dateStr, period, line, current){
   return LEVELS.map(lvl=>{
     const active = current===lvl ? 'active' : '';
@@ -231,6 +300,7 @@ async function renderLog(){
     <header class="top">
       <h1>Suivi RER C · D</h1>
       <p>Bibliothèque F. Mitterrand ↔ Bras de Fer</p>
+      <p class="profile-tag">Profil : <strong>${profileName(currentProfile)}</strong> · <button class="link-btn" onclick="switchProfile()">changer</button></p>
     </header>
 
     <div class="date-nav">
@@ -242,7 +312,7 @@ async function renderLog(){
       <button onclick="changeDate(1)" ${selectedDate>=todayStr()?'disabled style="opacity:.3"':''}>›</button>
     </div>
 
-<div class="card">
+    <div class="card">
       <div class="trip-title">
         <span>Trajet du matin</span>
         <button class="absent-btn ${matin.absent?'active':''}" onclick="setTripAbsent('${selectedDate}','matin',${!matin.absent})">${matin.absent ? '✓ Non effectué' : 'Non effectué'}</button>
@@ -356,6 +426,80 @@ async function computeStats(period){
   return {days, totalTrips, perturbedTrips, countsC, countsD, scoreC, scoreD};
 }
 
+function calendarMonthLabel(ym){
+  const [y,m] = ym.split('-').map(Number);
+  const d = new Date(y, m-1, 1);
+  return capitalize(d.toLocaleDateString('fr-FR',{month:'long', year:'numeric'}));
+}
+
+function shiftMonth(ym, delta){
+  let [y,m] = ym.split('-').map(Number);
+  m += delta;
+  if(m<1){m=12;y--;}
+  if(m>12){m=1;y++;}
+  return y+'-'+pad(m);
+}
+
+function calendarCellHtml(dateStr, todayS){
+  const dow = dateFromStr(dateStr).getDay();
+  const dayNum = parseInt(dateStr.slice(8,10),10);
+  if(dow===0 || dow===6){
+    return `<div class="cal-cell weekend">${dayNum}</div>`;
+  }
+  if(dateStr > todayS){
+    return `<div class="cal-cell future">${dayNum}</div>`;
+  }
+  const weight = {aucune:0, faible:1, forte:2, tres_forte:3};
+  const matin = getTrip(dateStr,'matin');
+  const soir = getTrip(dateStr,'soir');
+  const included = [matin,soir].filter(t=>!t.absent);
+  if(included.length===0){
+    return `<div class="cal-cell absent-day" onclick="goToDate('${dateStr}')">${dayNum}</div>`;
+  }
+  let maxW = 0;
+  included.forEach(t=>{ maxW = Math.max(maxW, weight[t.c], weight[t.d]); });
+  return `<div class="cal-cell sev-${maxW}" onclick="goToDate('${dateStr}')">${dayNum}</div>`;
+}
+
+async function renderCalendarGrid(ym){
+  await loadMonth(ym);
+  const [y,m] = ym.split('-').map(Number);
+  const firstDay = new Date(y, m-1, 1);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  let startOffset = firstDay.getDay();
+  startOffset = startOffset===0 ? 6 : startOffset-1;
+  const todayS = todayStr();
+  let cells = '';
+  for(let i=0;i<startOffset;i++) cells += '<div class="cal-cell blank"></div>';
+  for(let day=1; day<=daysInMonth; day++){
+    const dateStr = y+'-'+pad(m)+'-'+pad(day);
+    cells += calendarCellHtml(dateStr, todayS);
+  }
+  return cells;
+}
+
+async function renderCalendarSection(){
+  const labelEl = document.getElementById('cal-label');
+  const nextBtn = document.getElementById('cal-next-btn');
+  if(!labelEl) return;
+  const isCurrentOrFuture = calendarMonth >= todayStr().slice(0,7);
+  labelEl.textContent = calendarMonthLabel(calendarMonth);
+  nextBtn.disabled = isCurrentOrFuture;
+  nextBtn.style.opacity = isCurrentOrFuture ? .3 : 1;
+  document.getElementById('cal-days').innerHTML = await renderCalendarGrid(calendarMonth);
+}
+
+function calShift(delta){
+  calendarMonth = shiftMonth(calendarMonth, delta);
+  renderCalendarSection();
+}
+
+function goToDate(dateStr){
+  selectedDate = dateStr;
+  currentTab = 'log';
+  renderLog();
+}
+
 let chartC, chartD;
 
 async function renderStats(){
@@ -364,6 +508,7 @@ async function renderStats(){
     <header class="top">
       <h1>Statistiques</h1>
       <p>Trajets domicile-travail, jours ouvrés</p>
+      <p class="profile-tag">Profil : <strong>${profileName(currentProfile)}</strong> · <button class="link-btn" onclick="switchProfile()">changer</button></p>
     </header>
     <div class="tabs-period">
       <button data-w="week" class="${statsWindow==='week'?'active':''}" onclick="setWindow('week')">Semaine</button>
@@ -425,6 +570,26 @@ async function renderStats(){
       </div>
     </div>
 
+    <div class="section-title">Calendrier</div>
+    <div class="card">
+      <div class="date-nav" style="margin-bottom:10px;">
+        <button onclick="calShift(-1)">‹</button>
+        <div class="date-label" id="cal-label"></div>
+        <button id="cal-next-btn" onclick="calShift(1)">›</button>
+      </div>
+      <div class="cal-grid" style="margin-bottom:6px;">
+        <div class="cal-daylabel">L</div><div class="cal-daylabel">M</div><div class="cal-daylabel">M</div><div class="cal-daylabel">J</div><div class="cal-daylabel">V</div><div class="cal-daylabel">S</div><div class="cal-daylabel">D</div>
+      </div>
+      <div class="cal-grid" id="cal-days"></div>
+      <div class="legend">
+        <span><i style="background:var(--sev-0)"></i>Aucune</span>
+        <span><i style="background:var(--sev-1)"></i>Faible</span>
+        <span><i style="background:var(--sev-2)"></i>Forte</span>
+        <span><i style="background:var(--sev-3)"></i>Très forte</span>
+        <span><i style="background:var(--card);border:1px dashed var(--border)"></i>Non travaillé</span>
+      </div>
+    </div>
+
     <p class="empty-hint">Période : ${period0} → ${periodN}. Les trajets non renseignés comptent comme non perturbés.</p>
     <button class="reset-link" onclick="confirmReset()">Réinitialiser toutes les données</button>
   `;
@@ -456,6 +621,8 @@ async function renderStats(){
   });
   chartC = new Chart(ctxC, opts(stats.countsC));
   chartD = new Chart(ctxD, opts(stats.countsD));
+
+  await renderCalendarSection();
 }
 
 function setWindow(n){
@@ -477,8 +644,7 @@ async function confirmReset(){
     showToast('Erreur lors de la reinitialisation');
   }
 }
-document.getElementById('app').innerHTML = '<p class="empty-hint" style="padding-top:40px;">Chargement…</p>';
-renderLog();
+initApp();
 </script>
 </body>
 </html>
