@@ -30,6 +30,27 @@
     --sev-3-ink:#FFFFFF;
     --radius:10px;
   }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1A1B18;
+      --card:#232420;
+      --ink:#ECEDE7;
+      --muted:#9A9D93;
+      --border:#34362F;
+      --line-c:#FFCE00;
+      --line-c-ink:#2B2100;
+      --line-d:#1FA972;
+      --line-d-ink:#0A1C13;
+      --sev-0:#33352E;
+      --sev-0-ink:#A7A99C;
+      --sev-1:#D9A73E;
+      --sev-1-ink:#241900;
+      --sev-2:#D97A2E;
+      --sev-2-ink:#2A1400;
+      --sev-3:#C23D35;
+      --sev-3-ink:#FFFFFF;
+    }
+  }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;}
   #app{max-width:480px;margin:0 auto;padding:16px 16px 96px;min-height:100vh;}
@@ -59,7 +80,7 @@
   .trip-title i{font-size:15px;color:var(--muted);}
   .trip-title span{font-size:14px;font-weight:600;}
   .absent-btn{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:500;}
-  .absent-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .absent-btn.active{background:#1B1D1B;color:#fff;border-color:#1B1D1B;}
   .bulk-card summary{cursor:pointer;font-size:14px;font-weight:600;list-style:none;color:var(--ink);}
   .bulk-card summary::-webkit-details-marker{display:none;}
   .bulk-card summary::before{content:'+ ';color:var(--muted);font-weight:700;}
@@ -76,7 +97,7 @@
   .sev-btn.active[data-lvl="forte"]{background:var(--sev-2);color:var(--sev-2-ink);border-color:var(--sev-2);}
   .sev-btn.active[data-lvl="tres_forte"]{background:var(--sev-3);color:var(--sev-3-ink);border-color:var(--sev-3);}
 
-  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1B1D1B;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;}
   .toast.show{opacity:.92;}
 
   nav.bottom{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;max-width:480px;margin:0 auto;}
@@ -86,7 +107,7 @@
 
   .tabs-period{display:flex;gap:6px;margin-bottom:16px;}
   .tabs-period button{flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:12px;color:var(--muted);font-weight:500;}
-  .tabs-period button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .tabs-period button.active{background:#1B1D1B;color:#fff;border-color:#1B1D1B;}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
   .metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
@@ -649,13 +670,17 @@ async function renderStats(){
   if(chartD) chartD.destroy();
   const ctxC = document.getElementById('chartC').getContext('2d');
   const ctxD = document.getElementById('chartD').getContext('2d');
+  const cssVar = (name)=>getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const sevColors = [cssVar('--sev-0'), cssVar('--sev-1'), cssVar('--sev-2'), cssVar('--sev-3')];
+  const gridColor = cssVar('--border');
+  const tickColor = cssVar('--muted');
   const opts = (counts)=>({
     type:'bar',
     data:{
       labels:['Aucune','Faible','Forte','Très forte'],
       datasets:[{
         data:[counts.aucune, counts.faible, counts.forte, counts.tres_forte],
-        backgroundColor:['#E3E5DD','#F5C453','#EE8C3D','#D6483F'],
+        backgroundColor:sevColors,
         borderRadius:6,
         borderWidth:0
       }]
@@ -665,8 +690,8 @@ async function renderStats(){
       maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
-        y:{beginAtZero:true, ticks:{precision:0, font:{size:10}}, grid:{color:'#EDEEE8'}},
-        x:{ticks:{font:{size:10}}, grid:{display:false}}
+        y:{beginAtZero:true, ticks:{precision:0, font:{size:10}, color:tickColor}, grid:{color:gridColor}},
+        x:{ticks:{font:{size:10}, color:tickColor}, grid:{display:false}}
       }
     }
   });
