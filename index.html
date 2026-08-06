@@ -28,6 +28,8 @@
     --sev-2-ink:#4A2604;
     --sev-3:#D6483F;
     --sev-3-ink:#FFFFFF;
+    --accent-bg:#1B1D1B;
+    --accent-ink:#FFFFFF;
     --radius:10px;
   }
   @media (prefers-color-scheme: dark){
@@ -49,6 +51,8 @@
       --sev-2-ink:#2A1400;
       --sev-3:#C23D35;
       --sev-3-ink:#FFFFFF;
+      --accent-bg:#ECEDE7;
+      --accent-ink:#1A1B18;
     }
   }
   *{box-sizing:border-box;}
@@ -80,7 +84,7 @@
   .trip-title i{font-size:15px;color:var(--muted);}
   .trip-title span{font-size:14px;font-weight:600;}
   .absent-btn{border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:20px;padding:5px 10px;font-size:11px;font-weight:500;}
-  .absent-btn.active{background:#1B1D1B;color:#fff;border-color:#1B1D1B;}
+  .absent-btn.active{background:var(--accent-bg);color:var(--accent-ink);border-color:var(--accent-bg);}
   .bulk-card summary{cursor:pointer;font-size:14px;font-weight:600;list-style:none;color:var(--ink);}
   .bulk-card summary::-webkit-details-marker{display:none;}
   .bulk-card summary::before{content:'+ ';color:var(--muted);font-weight:700;}
@@ -107,7 +111,7 @@
 
   .tabs-period{display:flex;gap:6px;margin-bottom:16px;}
   .tabs-period button{flex:1;padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:12px;color:var(--muted);font-weight:500;}
-  .tabs-period button.active{background:#1B1D1B;color:#fff;border-color:#1B1D1B;}
+  .tabs-period button.active{background:var(--accent-bg);color:var(--accent-ink);border-color:var(--accent-bg);}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
   .metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
@@ -404,12 +408,11 @@ async function renderLog(){
       </div>
     </div>
 
-    <p class="empty-hint">Rien à faire si le trajet s'est bien passé — seule une perturbation doit être notée. Utilise "Non effectué" si tu n'as pas pris le RER ce jour-là (congés, télétravail, déplacement).</p>
+    <p class="empty-hint">Rien à faire si le trajet s'est bien passé — seule une perturbation doit être notée. Utilise "Non effectué" si tu n'as pas pris le RER ce jour-là.</p>
 
     <details class="card bulk-card">
       <summary>Marquer une période non travaillée</summary>
-      <p class="empty-hint" style="padding:10px 0 10px;text-align:left;">Pratique pour les vacances ou une longue absence : marque plusieurs jours d'un coup, sans avoir à cliquer jour par jour.</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;margin:10px 0;">
         <input type="date" id="bulk-start" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);font-family:'Inter';font-size:13px;background:var(--card);color:var(--ink);">
         <input type="date" id="bulk-end" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);font-family:'Inter';font-size:13px;background:var(--card);color:var(--ink);">
       </div>
